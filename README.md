@@ -4,3 +4,4 @@ A tool-based software for building/editing/simulating expanding material geometr
 # To Do
 1. Not much can be added due to pending patenting/academic material
 2. For now, build framework for building and visualizing 3D honeycombs
+3. Transfer generic code over to C++. Make it faster!
