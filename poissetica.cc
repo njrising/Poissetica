@@ -25,8 +25,9 @@ GLFWwindow* win;
 const GLchar *v_shader = "\
 #version 330 core\n\
 layout (location = 0) in vec3 position;\
+layout (location = 1) in vec3 offset;\
 void main(){\
-    gl_Position = vec4(position.x * 600.0/1300.0,position.y,position.z,1.0);\
+    gl_Position = vec4((position.x+offset.x)*600.0/1300.0,position.y + offset.y,position.z,1.0);\
 }\
 ";
 // fragment shader
@@ -45,21 +46,21 @@ void main(){\
 // the boundary are discarded.
 // Create_lattice([-1,1], [-1,1], [-1,1], {{1,0,0},{0,1,0},{0,0,1}}, 1)
 // Create_lattice([-x, x], [-y, y], [-z, z], [basis], [lattice generation type], [max])
-std::vector<float> lat;
-void create_lattice(std::vector<float> &lat, int x[2], int y[2], int z[2], float bas[3][3], int gen, int max){
+std::vector<GLfloat> lat;
+void create_lattice(std::vector<GLfloat> &lat, int x[2], int y[2], int z[2], float bas[3][3], int gen, int max){
     switch(gen){
         case 0:
             // Cubic boundary
-            for(int i = max * x[0];i <= max * x[1];++i){
+          for(int i = max * x[0];i <= max * x[1];++i){
                 for(int j = max * y[0];j <= max * y[1];++j){
                     for(int k = max * z[0];k <= max * z[1];++k){
-                        int x = i * bas[0][0] + j * bas[1][0] + k * bas[2][0];
-                        int y = i * bas[0][1] + j * bas[1][1] + k * bas[2][1];
-                        int z = i * bas[0][2] + j * bas[1][2] + k * bas[2][2];    
-                        if((abs(x) <= max) & (abs(y) <= max) & (abs(z) <= max)){
-                            lat.push_back(x);
-                            lat.push_back(y);
-                            lat.push_back(z);
+                        GLfloat xx = i * bas[0][0] + j * bas[1][0] + k * bas[2][0];
+                        GLfloat yy = i * bas[0][1] + j * bas[1][1] + k * bas[2][1];
+                        GLfloat zz = i * bas[0][2] + j * bas[1][2] + k * bas[2][2];    
+                        if((abs(xx) <= max) & (abs(yy) <= max) & (abs(zz) <= max)){
+                            lat.push_back(xx);
+                            lat.push_back(yy);
+                            lat.push_back(zz);
                         }
                     }
                 }
@@ -84,11 +85,10 @@ void help_message(void){
 
 
 
-
 const float cube[8][8] = {{-0.5,-0.5,-0.5},{0.5,-0.5,-0.5},{0.5,0.5,-0.5},{-0.5,0.5,-0.5},
                           {-0.5,-0.5, 0.5},{0.5,-0.5, 0.5},{0.5,0.5, 0.5},{-0.5,0.5, 0.5}};
                           
-const float bas[3][3] = {{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};                          
+float bas[3][3] = {{0.22,0.0,0.0},{0.0,0.22,0.0},{0.0,0.0,0.22}};                          
 
 const int mesh[6][4] = {{1,2,3,4},{1,2,6,5},{1,4,8,5},
                         {2,3,7,6},{4,3,7,8},{5,6,7,8}};
@@ -166,22 +166,29 @@ void c_shader(void){
     
 }
 
-    GLfloat vertices[] = {
-        -0.5f, -0.5f, 0.0f,  
-         0.5f, -0.5f, 0.0f, 
-         0.5f,  0.5f, 0.0f,
-        -0.5f,  0.5f, 0.0f,  
+    GLfloat vertices[] = {  // vertices
+        -0.1f, -0.1f, 0.0f,  
+         0.1f, -0.1f, 0.0f, 
+         0.1f,  0.1f, 0.0f,
+        -0.1f,  0.1f, 0.0f,  
     };
     
-    GLuint elements[] = {0,1,2, 0,2,3};
+    GLuint elements[] = {0,1,2, 0,2,3}; // element array
+    
+    std::vector<GLfloat> off = {-0.01,-0.01, 0.0,
+                         0.01,-0.01, 0.0,
+                         0.01, 0.01, 0.0,
+                        -0.01, 0.01, 0.0,};
 
-GLuint VBO, VAO, EBO;
+
+// vertex buffer, element array buffer, and vertex array object 
+GLuint VBO, EBO, IBO, VAO;
 
 // render
 void render(void){
     glBindVertexArray(VAO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT,0);
+    glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT,0,lat.size()/3);
     glBindVertexArray(0);        
 }
 
@@ -191,24 +198,33 @@ void gen_buffer(){
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);  // vertex buffer
     glGenBuffers(1, &EBO);  // element buffer
+    glGenBuffers(1, &IBO);  // instance buffer
          
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);   
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
+    glBindVertexArray(VAO); // bind VAO
 }
 
 // load buffer
 void load_buffer(){
+    // vertex buffer
+    glBindBuffer(GL_ARRAY_BUFFER, VBO); // bind VBO
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
     glEnableVertexAttribArray(0);
-    
+    // element buffer
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // bind EBO
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+    
+    // instance buffer
+    glBindBuffer(GL_ARRAY_BUFFER, IBO); // bind IBO
+    glBufferData(GL_ARRAY_BUFFER, lat.size()*sizeof(GLfloat), lat.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1,3,GL_FLOAT,GL_FALSE,3*sizeof(GLfloat),0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribDivisor(1,1);
    
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER,0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
+    glBindVertexArray(0);  // unbind VAO
+    glBindBuffer(GL_ARRAY_BUFFER,0);  // unbind VBO
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0); // unbind EBO
+    glBindBuffer(GL_ARRAY_BUFFER,0); // unbind IBO	
 }
 
 // delete buffer
@@ -216,6 +232,7 @@ void delete_buffer(){
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1, &IBO);
 }
 
             
@@ -224,17 +241,21 @@ int main(int argc, char* argv[]){
    init_lib();   // initialize libraries and opengl context
    c_shader();   // create and compile shaders
    gen_buffer(); // generate buffers
+   int a[2] = {-1,1};
+   int b[2] = {-0,0};
    
-   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+   create_lattice(lat,a,a,b,bas,0,5);
+   //for(auto i:lat){std::cout<<i<<std::endl;}
+   load_buffer();// load buffer data
+   
+   //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
           
    while(!glfwWindowShouldClose(win)){
     glfwPollEvents();
     
         glClearColor(0.0,0.0,0.1,1.0); 
         glClear(GL_COLOR_BUFFER_BIT);
-        
-        load_buffer();  // load buffer data
-    
+            
         render(); // render data     
             
         glfwSwapBuffers(win);
