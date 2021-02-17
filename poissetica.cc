@@ -167,43 +167,55 @@ void c_shader(void){
 }
 
     GLfloat vertices[] = {
-        -0.5f, -0.288675f, 0.0f, // Left  
-         0.5f, -0.288675f, 0.0f, // Right 
-         0.0f,  0.57735f, 0.0f  // Top   
+        -0.5f, -0.5f, 0.0f,  
+         0.5f, -0.5f, 0.0f, 
+         0.5f,  0.5f, 0.0f,
+        -0.5f,  0.5f, 0.0f,  
     };
+    
+    GLuint elements[] = {0,1,2, 0,2,3};
 
-GLuint VBO, VAO;
+GLuint VBO, VAO, EBO;
 
 // render
 void render(void){
     glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT,0);
     glBindVertexArray(0);        
 }
 
 // create buffer
 void gen_buffer(){
+
     glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);  
+    glGenBuffers(1, &VBO);  // vertex buffer
+    glGenBuffers(1, &EBO);  // element buffer
          
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);   
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+
 }
 
 // load buffer
 void load_buffer(){
-   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-   glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
-   glEnableVertexAttribArray(0);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+    glEnableVertexAttribArray(0);
+    
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
    
-   glBindBuffer(GL_ARRAY_BUFFER,VBO);
-   glBindVertexArray(0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER,0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0);
 }
 
 // delete buffer
 void delete_buffer(){
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &EBO);
 }
 
             
@@ -212,6 +224,8 @@ int main(int argc, char* argv[]){
    init_lib();   // initialize libraries and opengl context
    c_shader();   // create and compile shaders
    gen_buffer(); // generate buffers
+   
+   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
           
    while(!glfwWindowShouldClose(win)){
     glfwPollEvents();
