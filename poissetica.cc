@@ -9,7 +9,7 @@
 //
 //
 //
-// Testing... Don't compile
+// Testing...
 
 #define GLEW_STATIC
 #include <GL/glew.h>
@@ -88,7 +88,7 @@ void help_message(void){
 const float cube[8][8] = {{-0.5,-0.5,-0.5},{0.5,-0.5,-0.5},{0.5,0.5,-0.5},{-0.5,0.5,-0.5},
                           {-0.5,-0.5, 0.5},{0.5,-0.5, 0.5},{0.5,0.5, 0.5},{-0.5,0.5, 0.5}};
                           
-float bas[3][3] = {{0.22,0.0,0.0},{0.0,0.22,0.0},{0.0,0.0,0.22}};                          
+float bas[3][3] = {{0.03,0.0,0.0},{0.0,0.03,0.0},{0.0,0.0,0.03}};                          
 
 const int mesh[6][4] = {{1,2,3,4},{1,2,6,5},{1,4,8,5},
                         {2,3,7,6},{4,3,7,8},{5,6,7,8}};
@@ -167,18 +167,18 @@ void c_shader(void){
 }
 
     GLfloat vertices[] = {  // vertices
-        -0.1f, -0.1f, 0.0f,  
-         0.1f, -0.1f, 0.0f, 
-         0.1f,  0.1f, 0.0f,
-        -0.1f,  0.1f, 0.0f,  
+        -0.01f, -0.01f, 0.0f,  
+         0.01f, -0.01f, 0.0f, 
+         0.01f,  0.01f, 0.0f,
+        -0.01f,  0.01f, 0.0f,  
     };
     
     GLuint elements[] = {0,1,2, 0,2,3}; // element array
     
-    std::vector<GLfloat> off = {-0.01,-0.01, 0.0,
-                         0.01,-0.01, 0.0,
-                         0.01, 0.01, 0.0,
-                        -0.01, 0.01, 0.0,};
+    std::vector<GLfloat> off = {-0.001,-0.001, 0.0,
+                         0.001,-0.001, 0.0,
+                         0.001, 0.001, 0.0,
+                        -0.001, 0.001, 0.0,};
 
 
 // vertex buffer, element array buffer, and vertex array object 
@@ -244,21 +244,21 @@ int main(int argc, char* argv[]){
    int a[2] = {-1,1};
    int b[2] = {-0,0};
    
-   create_lattice(lat,a,a,b,bas,0,5);
+   create_lattice(lat,a,a,b,bas,0,20);
    //for(auto i:lat){std::cout<<i<<std::endl;}
    load_buffer();// load buffer data
    
    //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
           
    while(!glfwWindowShouldClose(win)){
-    glfwPollEvents();
+       glfwPollEvents();
     
-        glClearColor(0.0,0.0,0.1,1.0); 
-        glClear(GL_COLOR_BUFFER_BIT);
+       glClearColor(0.0,0.0,0.1,1.0); 
+       glClear(GL_COLOR_BUFFER_BIT);
             
-        render(); // render data     
+       render(); // render data     
             
-        glfwSwapBuffers(win);
+       glfwSwapBuffers(win);
     }    
     
     delete_buffer(); // delete buffers
