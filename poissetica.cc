@@ -8,26 +8,32 @@
 // 2. 
 //
 //
+// Author: Nathan Rising
 //
-// Testing...
 
 #define GLEW_STATIC
 #include <GL/glew.h>
 
 #include <GLFW/glfw3.h>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <vector>
 #include <iostream>
 
 // window
 GLFWwindow* win;
+// shader program
+GLuint shaderProgram;
 // vertex shader
 const GLchar *v_shader = "\
 #version 330 core\n\
 layout (location = 0) in vec3 position;\
 layout (location = 1) in vec3 offset;\
+uniform mat4 MVP;\
 void main(){\
-    gl_Position = vec4((position.x+offset.x)*600.0/1300.0,position.y + offset.y,position.z,1.0);\
+    gl_Position = MVP * vec4((position.x+offset.x),position.y + offset.y,position.z + offset.z,1.0);\
 }\
 ";
 // fragment shader
@@ -85,13 +91,15 @@ void help_message(void){
 
 
 
-const float cube[8][8] = {{-0.5,-0.5,-0.5},{0.5,-0.5,-0.5},{0.5,0.5,-0.5},{-0.5,0.5,-0.5},
-                          {-0.5,-0.5, 0.5},{0.5,-0.5, 0.5},{0.5,0.5, 0.5},{-0.5,0.5, 0.5}};
+const float cube[] = {-0.5,-0.5,-0.5, 0.5,-0.5,-0.5, 0.5,0.5,-0.5,-0.5,0.5,-0.5,
+                      -0.5,-0.5, 0.5, 0.5,-0.5, 0.5, 0.5,0.5, 0.5,-0.5,0.5, 0.5};
                           
-float bas[3][3] = {{0.03,0.0,0.0},{0.0,0.03,0.0},{0.0,0.0,0.03}};                          
-
-const int mesh[6][4] = {{1,2,3,4},{1,2,6,5},{1,4,8,5},
-                        {2,3,7,6},{4,3,7,8},{5,6,7,8}};
+float bas[3][3] = {{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};                          
+                        
+int mesh[] = {0,1,2, 0,2,3, 0,1,5, 0,5,4,
+              0,3,7, 0,7,4, 1,2,6, 1,6,5,
+              3,2,6, 3,6,7, 4,5,6, 4,6,7};                        
+                        
                         
 // initialize glfw and glew libraries and create window                        
 void init_lib(void){
@@ -147,7 +155,7 @@ void c_shader(void){
     }
     
     // Link shaders
-    GLuint shaderProgram = glCreateProgram();
+    shaderProgram = glCreateProgram();
     glAttachShader(shaderProgram,vertexshader);
     glAttachShader(shaderProgram,fragmentshader);
     glLinkProgram(shaderProgram);
@@ -188,7 +196,7 @@ GLuint VBO, EBO, IBO, VAO;
 void render(void){
     glBindVertexArray(VAO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT,0,lat.size()/3);
+    glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT,0,lat.size()/3);
     glBindVertexArray(0);        
 }
 
@@ -207,12 +215,12 @@ void gen_buffer(){
 void load_buffer(){
     // vertex buffer
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // bind VBO
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
     glEnableVertexAttribArray(0);
     // element buffer
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO); // bind EBO
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(mesh), mesh, GL_STATIC_DRAW);
     
     // instance buffer
     glBindBuffer(GL_ARRAY_BUFFER, IBO); // bind IBO
@@ -235,20 +243,34 @@ void delete_buffer(){
     glDeleteBuffers(1, &IBO);
 }
 
-            
+
+// Camera stuff
+glm::vec3 position = {10,10,10};
+glm::vec3 direction = {-10,-10,-10};
+glm::vec3 up = {0,1,0};
+glm::vec3 right = {1,0,0};
+         
 int main(int argc, char* argv[]){
 
    init_lib();   // initialize libraries and opengl context
    c_shader();   // create and compile shaders
    gen_buffer(); // generate buffers
-   int a[2] = {-1,1};
-   int b[2] = {-0,0};
    
-   create_lattice(lat,a,a,b,bas,0,20);
+   glm::mat4 projection_matrix = glm::perspective(glm::radians(45.0f), 1300.0f/600.0f, 0.1f, 25.0f);
+   glm::mat4 view_matrix = glm::lookAt(position,position + direction,up); 
+   glm::mat4 model_matrix = glm::mat4(1.0);
+   
+   glm::mat4 MVP = projection_matrix * view_matrix * model_matrix;
+   GLuint matrix_ID = glGetUniformLocation(shaderProgram,"MVP");
+   glUniformMatrix4fv(matrix_ID,1,GL_FALSE,&MVP[0][0]);
+   
+   int a[2] = {-1,1};
+   
+   create_lattice(lat,a,a,a,bas,0,3);
    //for(auto i:lat){std::cout<<i<<std::endl;}
    load_buffer();// load buffer data
    
-   //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
           
    while(!glfwWindowShouldClose(win)){
        glfwPollEvents();
@@ -267,12 +289,6 @@ int main(int argc, char* argv[]){
   glfwTerminate();
 return 0;
 }
-
-
-
-
-
-
 
 
  
