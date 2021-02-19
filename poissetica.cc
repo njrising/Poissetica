@@ -33,18 +33,16 @@ layout (location = 0) in vec3 position;\
 layout (location = 1) in vec3 offset;\
 uniform mat4 MVP;\
 void main(){\
-    gl_Position = MVP * vec4((position.x+offset.x),position.y + offset.y,position.z + offset.z,1.0);\
+    gl_Position = MVP * vec4(position + offset,1.0);\
 }\
 ";
 // fragment shader
 const GLchar *f_shader = "\
 #version 330 core\n\
 void main(){\
-    gl_FragColor = vec4(1.0,0.0,0.0,1.0);\
+    gl_FragColor = vec4(1.0,0.3,0.3,1.0);\
 }\
 ";
-
-
 
 // CREATE LATTICE for center points of each polyhedron.
 // These points are offsets that will be applied to position the geometry in space
@@ -56,23 +54,40 @@ std::vector<GLfloat> lat;
 void create_lattice(std::vector<GLfloat> &lat, int x[2], int y[2], int z[2], float bas[3][3], int gen, int max){
     switch(gen){
         case 0:
-            // Cubic boundary
+          // Cubic boundary
           for(int i = max * x[0];i <= max * x[1];++i){
-                for(int j = max * y[0];j <= max * y[1];++j){
-                    for(int k = max * z[0];k <= max * z[1];++k){
-                        GLfloat xx = i * bas[0][0] + j * bas[1][0] + k * bas[2][0];
-                        GLfloat yy = i * bas[0][1] + j * bas[1][1] + k * bas[2][1];
-                        GLfloat zz = i * bas[0][2] + j * bas[1][2] + k * bas[2][2];    
-                        if((abs(xx) <= max) & (abs(yy) <= max) & (abs(zz) <= max)){
-                            lat.push_back(xx);
-                            lat.push_back(yy);
-                            lat.push_back(zz);
-                        }
-                    }
-                }
-            }
-            break;
-    } 
+              for(int j = max * y[0];j <= max * y[1];++j){
+                  for(int k = max * z[0];k <= max * z[1];++k){
+                      GLfloat xx = i * bas[0][0] + j * bas[1][0] + k * bas[2][0];
+                      GLfloat yy = i * bas[0][1] + j * bas[1][1] + k * bas[2][1];
+                      GLfloat zz = i * bas[0][2] + j * bas[1][2] + k * bas[2][2];    
+                      if((abs(xx) <= max) & (abs(yy) <= max) & (abs(zz) <= max)){
+                          lat.push_back(xx);
+                          lat.push_back(yy);
+                          lat.push_back(zz);
+                      }
+                  }
+              }
+          }
+          break;
+        case 1:
+        // Spherical boundary
+        for(int i = max * x[0];i <= max * x[1];++i){
+        	for(int j = max * y[0];j <= max * y[1];++j){
+				for(int k = max * z[0];k <= max * z[1];++k){
+					GLfloat xx = i * bas[0][0] + j * bas[1][0] + k * bas[2][0];
+                    GLfloat yy = i * bas[0][1] + j * bas[1][1] + k * bas[2][1];
+                    GLfloat zz = i * bas[0][2] + j * bas[1][2] + k * bas[2][2];
+					if(xx*xx+yy*yy+zz*zz <= max*max){
+						lat.push_back(xx);
+						lat.push_back(yy);
+						lat.push_back(zz);
+					}					 
+				}
+			}		 
+        } 
+        break;    
+    } 	
 }
 
 // Print help message explaining the commands to use the program
@@ -174,22 +189,7 @@ void c_shader(void){
     
 }
 
-    GLfloat vertices[] = {  // vertices
-        -0.01f, -0.01f, 0.0f,  
-         0.01f, -0.01f, 0.0f, 
-         0.01f,  0.01f, 0.0f,
-        -0.01f,  0.01f, 0.0f,  
-    };
-    
-    GLuint elements[] = {0,1,2, 0,2,3}; // element array
-    
-    std::vector<GLfloat> off = {-0.001,-0.001, 0.0,
-                         0.001,-0.001, 0.0,
-                         0.001, 0.001, 0.0,
-                        -0.001, 0.001, 0.0,};
-
-
-// vertex buffer, element array buffer, and vertex array object 
+// vertex buffer, element array buffer, instance buffer, and vertex array object 
 GLuint VBO, EBO, IBO, VAO;
 
 // render
@@ -249,6 +249,47 @@ glm::vec3 position = {10,10,10};
 glm::vec3 direction = {-10,-10,-10};
 glm::vec3 up = {0,1,0};
 glm::vec3 right = {1,0,0};
+
+GLfloat deltaTime;
+GLfloat speed = 3.0f;
+float nowTime;
+float lastTime = 0.0;
+
+glm::mat4 model_matrix = glm::mat4(1.0);
+
+// Rotate model
+glm::mat4 rotate_model(){
+	// X rotation
+	if(glfwGetKey(win,GLFW_KEY_X) == GLFW_PRESS){
+		glm::mat4 xmatrix = glm::mat4(1,0,0,0,
+                        	0,glm::cos(deltaTime*speed),glm::sin(-deltaTime*speed),0,
+                        	0,glm::sin(deltaTime*speed),glm::cos(deltaTime*speed),0,
+                        	0,0,0,1);
+
+		model_matrix = glm::transpose(xmatrix) * model_matrix;
+
+	}
+	// y rotation
+	if(glfwGetKey(win,GLFW_KEY_Y) == GLFW_PRESS){
+		glm::mat4 ymatrix = glm::mat4(cos(deltaTime*speed),0,sin(deltaTime*speed),0,
+                  			0,1,0,0,
+                  			sin(-deltaTime*speed),0,cos(deltaTime*speed),0,
+                  			0,0,0,1);
+		model_matrix = glm::transpose(ymatrix) * model_matrix;
+	}
+	// z rotation
+	if(glfwGetKey(win,GLFW_KEY_Z) == GLFW_PRESS){
+    	glm::mat4 zmatrix = glm::mat4(glm::cos(deltaTime*speed),glm::sin(-deltaTime*speed),0,0,
+                      	    glm::sin(deltaTime*speed),glm::cos(deltaTime*speed),0,0,
+                            0,0,1,0,
+                            0,0,0,1);
+		model_matrix = glm::transpose(zmatrix) * model_matrix;
+	}
+
+
+
+	return model_matrix;
+}
          
 int main(int argc, char* argv[]){
 
@@ -258,7 +299,7 @@ int main(int argc, char* argv[]){
    
    glm::mat4 projection_matrix = glm::perspective(glm::radians(45.0f), 1300.0f/600.0f, 0.1f, 25.0f);
    glm::mat4 view_matrix = glm::lookAt(position,position + direction,up); 
-   glm::mat4 model_matrix = glm::mat4(1.0);
+   
    
    glm::mat4 MVP = projection_matrix * view_matrix * model_matrix;
    GLuint matrix_ID = glGetUniformLocation(shaderProgram,"MVP");
@@ -266,14 +307,22 @@ int main(int argc, char* argv[]){
    
    int a[2] = {-1,1};
    
-   create_lattice(lat,a,a,a,bas,0,3);
+   create_lattice(lat,a,a,a,bas,1,3);
    //for(auto i:lat){std::cout<<i<<std::endl;}
    load_buffer();// load buffer data
    
    glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
           
-   while(!glfwWindowShouldClose(win)){
-       glfwPollEvents();
+   while((!glfwWindowShouldClose(win)) & (glfwGetKey(win,GLFW_KEY_SPACE) != GLFW_PRESS)){
+		glfwPollEvents();
+		
+		nowTime = glfwGetTime();
+		deltaTime = float(nowTime - lastTime);
+		lastTime = nowTime;
+
+		model_matrix = rotate_model();
+		glm::mat4 MVP = projection_matrix * view_matrix * model_matrix;
+		glUniformMatrix4fv(matrix_ID,1,GL_FALSE,&MVP[0][0]);
     
        glClearColor(0.0,0.0,0.1,1.0); 
        glClear(GL_COLOR_BUFFER_BIT);
