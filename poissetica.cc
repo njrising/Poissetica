@@ -21,6 +21,8 @@
 
 #include <vector>
 #include <iostream>
+#include <fstream> // file stream
+#include <sstream>
 
 // window
 GLFWwindow* win;
@@ -32,15 +34,18 @@ const GLchar *v_shader = "\
 layout (location = 0) in vec3 position;\
 layout (location = 1) in vec3 offset;\
 uniform mat4 MVP;\
+out vec3 fragmentColor;\
 void main(){\
     gl_Position = MVP * vec4(position + offset,1.0);\
+	fragmentColor = vec3(cos(offset.x*0.2),cos(offset.y*0.2),cos(offset.z*0.2));\
 }\
 ";
 // fragment shader
 const GLchar *f_shader = "\
 #version 330 core\n\
+in vec3 fragmentColor;\
 void main(){\
-    gl_FragColor = vec4(1.0,0.3,0.3,1.0);\
+    gl_FragColor = vec4(fragmentColor,1.0);\
 }\
 ";
 
@@ -51,16 +56,16 @@ void main(){\
 // Create_lattice([-1,1], [-1,1], [-1,1], {{1,0,0},{0,1,0},{0,0,1}}, 1)
 // Create_lattice([-x, x], [-y, y], [-z, z], [basis], [lattice generation type], [max])
 std::vector<GLfloat> lat;
-void create_lattice(std::vector<GLfloat> &lat, int x[2], int y[2], int z[2], float bas[3][3], int gen, int max){
+void create_lattice(std::vector<GLfloat> &lat, int x[2], int y[2], int z[2], float bas[], int gen, int max){
     switch(gen){
         case 0:
           // Cubic boundary
           for(int i = max * x[0];i <= max * x[1];++i){
               for(int j = max * y[0];j <= max * y[1];++j){
                   for(int k = max * z[0];k <= max * z[1];++k){
-                      GLfloat xx = i * bas[0][0] + j * bas[1][0] + k * bas[2][0];
-                      GLfloat yy = i * bas[0][1] + j * bas[1][1] + k * bas[2][1];
-                      GLfloat zz = i * bas[0][2] + j * bas[1][2] + k * bas[2][2];    
+                      GLfloat xx = i * bas[0] + j * bas[3] + k * bas[6];
+                      GLfloat yy = i * bas[1] + j * bas[4] + k * bas[7];
+                      GLfloat zz = i * bas[2] + j * bas[5] + k * bas[8];    
                       if((abs(xx) <= max) & (abs(yy) <= max) & (abs(zz) <= max)){
                           lat.push_back(xx);
                           lat.push_back(yy);
@@ -75,9 +80,9 @@ void create_lattice(std::vector<GLfloat> &lat, int x[2], int y[2], int z[2], flo
         for(int i = max * x[0];i <= max * x[1];++i){
         	for(int j = max * y[0];j <= max * y[1];++j){
 				for(int k = max * z[0];k <= max * z[1];++k){
-					GLfloat xx = i * bas[0][0] + j * bas[1][0] + k * bas[2][0];
-                    GLfloat yy = i * bas[0][1] + j * bas[1][1] + k * bas[2][1];
-                    GLfloat zz = i * bas[0][2] + j * bas[1][2] + k * bas[2][2];
+					GLfloat xx = i * bas[0] + j * bas[3] + k * bas[6];
+                                        GLfloat yy = i * bas[1] + j * bas[4] + k * bas[7];
+                                        GLfloat zz = i * bas[2] + j * bas[5] + k * bas[8];
 					if(xx*xx+yy*yy+zz*zz <= max*max){
 						lat.push_back(xx);
 						lat.push_back(yy);
@@ -104,20 +109,30 @@ void help_message(void){
     
 }
 
-
-
-const float cube[] = {-0.5,-0.5,-0.5, 0.5,-0.5,-0.5, 0.5,0.5,-0.5,-0.5,0.5,-0.5,
-                      -0.5,-0.5, 0.5, 0.5,-0.5, 0.5, 0.5,0.5, 0.5,-0.5,0.5, 0.5};
+//const GLfloat cube[] = {-0.5,-0.5,-0.5, 0.5,-0.5,-0.5, 0.5,0.5,-0.5,-0.5,0.5,-0.5,
+//                        -0.5,-0.5, 0.5, 0.5,-0.5, 0.5, 0.5,0.5, 0.5,-0.5,0.5, 0.5};
                           
-float bas[3][3] = {{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};                          
+//const GLfloat bas[3][3] = {{1.0,0.0,0.0},{0.0,1.0,0.0},{0.0,0.0,1.0}};                          
                         
-int mesh[] = {0,1,2, 0,2,3, 0,1,5, 0,5,4,
-              0,3,7, 0,7,4, 1,2,6, 1,6,5,
-              3,2,6, 3,6,7, 4,5,6, 4,6,7};                        
+//const GLint mesh[] = {0,1,2, 0,2,3, 0,1,5, 0,5,4,
+//                     0,3,7, 0,7,4, 1,2,6, 1,6,5,
+//           	      3,2,6, 3,6,7, 4,5,6, 4,6,7};
+            	      
+            	      
+            	      
+            	      
+const GLfloat cube[] = {0.5,-0.5,0.707106781186548, 1.5,-0.5,0.707106781186548, 1.5,0.5,0.707106781186548,
+			0.5,0.5,0.707106781186548, 1.0,0.0,1.414213562373095, 1.0,0.0,0.0};
+
+GLfloat bas[] ={1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, 1.414213562373095};
+
+const GLint mesh[] = {0,1,4,0,1,5,0,3,4,0,3,5,
+		      1,2,4,1,2,5,2,3,4,2,3,5};            	      
+            	                              
                         
                         
 // initialize glfw and glew libraries and create window                        
-void init_lib(void){
+void initialize_libraries(void){
     // initialize glfw
     glfwInit();
     //
@@ -143,7 +158,7 @@ void init_lib(void){
     std::cout<<"Shading language: "<<glGetString(GL_SHADING_LANGUAGE_VERSION)<<'\n';
 }
 
-void c_shader(void){
+void compile_shader(void){
     // create and compile vertex shader
     GLuint vertexshader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertexshader,1,&v_shader,0);
@@ -196,12 +211,12 @@ GLuint VBO, EBO, IBO, VAO;
 void render(void){
     glBindVertexArray(VAO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glDrawElementsInstanced(GL_TRIANGLES, 36, GL_UNSIGNED_INT,0,lat.size()/3);
+    glDrawElementsInstanced(GL_TRIANGLES, sizeof(mesh)/sizeof(mesh[0]), GL_UNSIGNED_INT,0,lat.size()/3);
     glBindVertexArray(0);        
 }
 
 // create buffer
-void gen_buffer(){
+void generate_buffer(void){
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);  // vertex buffer
@@ -212,7 +227,7 @@ void gen_buffer(){
 }
 
 // load buffer
-void load_buffer(){
+void load_buffer(void){
     // vertex buffer
     glBindBuffer(GL_ARRAY_BUFFER, VBO); // bind VBO
     glBufferData(GL_ARRAY_BUFFER, sizeof(cube), cube, GL_STATIC_DRAW);
@@ -236,7 +251,7 @@ void load_buffer(){
 }
 
 // delete buffer
-void delete_buffer(){
+void delete_buffer(void){
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
@@ -252,22 +267,22 @@ glm::vec3 right = {1,0,0};
 
 GLfloat deltaTime;
 GLfloat speed = 3.0f;
-float nowTime;
-float lastTime = 0.0;
+GLfloat nowTime;
+GLfloat lastTime = 0.0;
 
 glm::mat4 model_matrix = glm::mat4(1.0);
 
 // Rotate model
+// [X] rotate x [Y] rotate y [Z] rotate z
 glm::mat4 rotate_model(){
-	// X rotation
-	if(glfwGetKey(win,GLFW_KEY_X) == GLFW_PRESS){
-		glm::mat4 xmatrix = glm::mat4(1,0,0,0,
-                        	0,glm::cos(deltaTime*speed),glm::sin(-deltaTime*speed),0,
+    // X rotation
+    if(glfwGetKey(win,GLFW_KEY_X) == GLFW_PRESS){
+        glm::mat4 xmatrix = glm::mat4(1,0,0,0,
+                         	0,glm::cos(deltaTime*speed),glm::sin(-deltaTime*speed),0,
                         	0,glm::sin(deltaTime*speed),glm::cos(deltaTime*speed),0,
                         	0,0,0,1);
 
 		model_matrix = glm::transpose(xmatrix) * model_matrix;
-
 	}
 	// y rotation
 	if(glfwGetKey(win,GLFW_KEY_Y) == GLFW_PRESS){
@@ -285,38 +300,66 @@ glm::mat4 rotate_model(){
                             0,0,0,1);
 		model_matrix = glm::transpose(zmatrix) * model_matrix;
 	}
-
-
-
 	return model_matrix;
 }
          
 int main(int argc, char* argv[]){
 
-   init_lib();   // initialize libraries and opengl context
-   c_shader();   // create and compile shaders
-   gen_buffer(); // generate buffers
+	initialize_libraries();   // initialize libraries and opengl context
+    compile_shader();         // create and compile shaders
+    generate_buffer();        // generate buffers
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
+    glm::mat4 projection_matrix = glm::perspective(glm::radians(45.0f), 1300.0f/600.0f, 0.1f, 25.0f);
+    glm::mat4 view_matrix = glm::lookAt(position,position + direction,up); 
    
-   glm::mat4 projection_matrix = glm::perspective(glm::radians(45.0f), 1300.0f/600.0f, 0.1f, 25.0f);
-   glm::mat4 view_matrix = glm::lookAt(position,position + direction,up); 
+    glm::mat4 MVP = projection_matrix * view_matrix * model_matrix;
+    GLuint matrix_ID = glGetUniformLocation(shaderProgram,"MVP");
+    glUniformMatrix4fv(matrix_ID,1,GL_FALSE,&MVP[0][0]);
    
+//------- Read from file
+	
+	const std::string file_name = "data.txt";	
+	std::fstream in_file;
+	in_file.open(file_name,std::ios::in);
+	if(in_file.is_open()){
+		std::string in_str;
+		std::string token;
+		float in_num;
+		int n_v, n_b, n_i;
+		std::vector<GLfloat> vert;
+		//GLfloat bas
+		//GLint mesh
+		getline(in_file,in_str);  // #0
+	//	while(in_str.compare("#1")){
+			std::cout<<in_str<<'\n';
+			getline(in_file,in_str);  // #V
+			getline(in_file,in_str);  // 24
+			std::stringstream(in_str) >> n_v;
+
+			
+	
+			//getline(in_file,in_str);			
+	//	}
+
+		
+	}
+	in_file.close();
+
+//------ End read from file
+	
+    int a[2] = {-1,1};
+    create_lattice(lat,a,a,a,bas,1,6);
+    load_buffer();// load buffer data
    
-   glm::mat4 MVP = projection_matrix * view_matrix * model_matrix;
-   GLuint matrix_ID = glGetUniformLocation(shaderProgram,"MVP");
-   glUniformMatrix4fv(matrix_ID,1,GL_FALSE,&MVP[0][0]);
-   
-   int a[2] = {-1,1};
-   
-   create_lattice(lat,a,a,a,bas,1,3);
-   //for(auto i:lat){std::cout<<i<<std::endl;}
-   load_buffer();// load buffer data
-   
-   glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
+    //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
           
-   while((!glfwWindowShouldClose(win)) & (glfwGetKey(win,GLFW_KEY_SPACE) != GLFW_PRESS)){
+    while((!glfwWindowShouldClose(win)) & (glfwGetKey(win,GLFW_KEY_SPACE) != GLFW_PRESS)){
 		glfwPollEvents();
 		
-		nowTime = glfwGetTime();
+	 	nowTime = glfwGetTime();
 		deltaTime = float(nowTime - lastTime);
 		lastTime = nowTime;
 
@@ -324,19 +367,19 @@ int main(int argc, char* argv[]){
 		glm::mat4 MVP = projection_matrix * view_matrix * model_matrix;
 		glUniformMatrix4fv(matrix_ID,1,GL_FALSE,&MVP[0][0]);
     
-       glClearColor(0.0,0.0,0.1,1.0); 
-       glClear(GL_COLOR_BUFFER_BIT);
+        glClearColor(0.0,0.0,0.1,1.0); 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             
-       render(); // render data     
+        render(); // render data     
             
-       glfwSwapBuffers(win);
+        glfwSwapBuffers(win);
     }    
     
     delete_buffer(); // delete buffers
     
 
-  glfwTerminate();
-return 0;
+	glfwTerminate();
+	return 0;
 }
 
 
