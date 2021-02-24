@@ -49,6 +49,15 @@ void main(){\
 }\
 ";
 
+bool put(int x, int y, int z, int m, int gen){
+	switch(gen){
+	case 0:
+		return (abs(x) <= m) & (abs(y) <= m) & (abs(z) <= m);
+	default:
+		return x*x+y*y+z*z <= m*m;
+	}
+}
+
 // CREATE LATTICE for center points of each polyhedron.
 // These points are offsets that will be applied to position the geometry in space
 // The first generation type is a cubic boundary. Lattice points that extend beyound
@@ -57,42 +66,21 @@ void main(){\
 // Create_lattice([-x, x], [-y, y], [-z, z], [basis], [lattice generation type], [max])
 std::vector<GLfloat> lat;
 void create_lattice(std::vector<GLfloat> &lat, int x[2], int y[2], int z[2], float bas[], int gen, int max){
-    switch(gen){
-        case 0:
-          // Cubic boundary
-          for(int i = max * x[0];i <= max * x[1];++i){
-              for(int j = max * y[0];j <= max * y[1];++j){
-                  for(int k = max * z[0];k <= max * z[1];++k){
-                      GLfloat xx = i * bas[0] + j * bas[3] + k * bas[6];
-                      GLfloat yy = i * bas[1] + j * bas[4] + k * bas[7];
-                      GLfloat zz = i * bas[2] + j * bas[5] + k * bas[8];    
-                      if((abs(xx) <= max) & (abs(yy) <= max) & (abs(zz) <= max)){
-                          lat.push_back(xx);
-                          lat.push_back(yy);
-                          lat.push_back(zz);
-                      }
-                  }
-              }
-          }
-          break;
-        case 1:
-        // Spherical boundary
-        for(int i = max * x[0];i <= max * x[1];++i){
-        	for(int j = max * y[0];j <= max * y[1];++j){
-				for(int k = max * z[0];k <= max * z[1];++k){
-					GLfloat xx = i * bas[0] + j * bas[3] + k * bas[6];
-                                        GLfloat yy = i * bas[1] + j * bas[4] + k * bas[7];
-                                        GLfloat zz = i * bas[2] + j * bas[5] + k * bas[8];
-					if(xx*xx+yy*yy+zz*zz <= max*max){
-						lat.push_back(xx);
-						lat.push_back(yy);
-						lat.push_back(zz);
-					}					 
-				}
-			}		 
-        } 
-        break;    
-    } 	
+    // Cubic boundary
+    for(int i = max * x[0];i <= max * x[1];++i){
+        for(int j = max * y[0];j <= max * y[1];++j){
+            for(int k = max * z[0];k <= max * z[1];++k){
+                GLfloat xx = i * bas[0] + j * bas[3] + k * bas[6];
+                GLfloat yy = i * bas[1] + j * bas[4] + k * bas[7];
+                GLfloat zz = i * bas[2] + j * bas[5] + k * bas[8];
+                if(put(xx,yy,zz,max,gen)){
+          	    	lat.push_back(xx);
+                    lat.push_back(yy);
+                    lat.push_back(zz);
+                }
+        	}
+    	}
+    }
 }
 
 // Print help message explaining the commands to use the program
@@ -121,14 +109,33 @@ void help_message(void){
             	      
             	      
             	      
-const GLfloat cube[] = {0.5,-0.5,0.707106781186548, 1.5,-0.5,0.707106781186548, 1.5,0.5,0.707106781186548,
+//const GLfloat cube[] = {0.5,-0.5,0.707106781186548, 1.5,-0.5,0.707106781186548, 1.5,0.5,0.707106781186548,
+//			            0.5,0.5,0.707106781186548, 1.0,0.0,1.414213562373095, 1.0,0.0,0.0};
+
+//GLfloat bas[] ={1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, 1.414213562373095};
+
+//const GLint mesh[] = {0,1,4,0,1,5,0,3,4,0,3,5,
+//		              1,2,4,1,2,5,2,3,4,2,3,5};            	      
+
+const GLfloat cube[] = {-0.5,-0.5,0.707106781186548,   0.5,-0.5,0.707106781186548, -0.5,0.5,0.707106781186548,       // cuboctahedron 
+			0.5,0.5,0.707106781186548,    0.0,-1.0,0.0,                0.0,1.0,0.0, 
+			-1.0,0.0,0.0,                  1.0,0.0,0.0,                -0.5,-0.5,-0.707106781186548, 
+			0.5,-0.5,-0.707106781186548, -0.5,0.5,-0.707106781186548,  0.5,0.5,-0.707106781186548,
+			0.5,-0.5,0.707106781186548, 1.5,-0.5,0.707106781186548, 1.5,0.5,0.707106781186548,           // octahedron
 			0.5,0.5,0.707106781186548, 1.0,0.0,1.414213562373095, 1.0,0.0,0.0};
 
-GLfloat bas[] ={1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 0.0, 0.0, 1.414213562373095};
+GLfloat bas[] ={1.0, 1.0, 0.0,
+	        -1.0, 1.0, 0.0,
+	         0.0, 0.0, 1.414213562373095};
 
-const GLint mesh[] = {0,1,4,0,1,5,0,3,4,0,3,5,
-		      1,2,4,1,2,5,2,3,4,2,3,5};            	      
-            	                              
+
+const GLint mesh[] = {0,1,4, 0,2,6, 1,3,7, 2,3,5,		// cuboctahedron
+                        4,8,9, 5,10,11, 6,8,10, 7,9,11,
+                        0,1,3, 0,3,2, 4,1,7, 4,7,9, 
+                        5,3,7, 5,7,11, 6,0,4, 6,4,8, 
+                        6,2,5, 6,5,10, 8,9,11, 8,11,10,
+		        12,13,16,12,13,17,12,15,16,12,15,17,	// octahedron
+		        13,14,18,13,14,17,14,15,16,14,15,17};            	                              
                         
                         
 // initialize glfw and glew libraries and create window                        
@@ -217,7 +224,6 @@ void render(void){
 
 // create buffer
 void generate_buffer(void){
-
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);  // vertex buffer
     glGenBuffers(1, &EBO);  // element buffer
@@ -351,7 +357,7 @@ int main(int argc, char* argv[]){
 //------ End read from file
 	
     int a[2] = {-1,1};
-    create_lattice(lat,a,a,a,bas,1,6);
+    create_lattice(lat,a,a,a,bas,0,3);
     load_buffer();// load buffer data
    
     //glPolygonMode(GL_FRONT_AND_BACK,GL_LINE);
